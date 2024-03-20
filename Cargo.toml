@@ -1,0 +1,15 @@
+[package]
+name = "maze_generator"
+version = "0.1.0"
+edition = "2021"
+authors = ["Sandra"]
+# TODO: this
+repository = "https://github.com/an-Iceberg/"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+egui = "0.25.0"
+egui-macroquad = "0.15.0"
+macroquad = "0.3.26"
+rand = "0.8.5"
