@@ -33,6 +33,7 @@ pub(crate) const VISITED_COLOR: u32 = 0x804080;
 pub(crate) const UNVISITED_COLOR: u32 = 0xff80ff;
 pub(crate) const GRID_WIDTH: usize = 116;
 pub(crate) const GRID_HEIGHT: usize = 74;
+pub(crate) const OFFSET: f32 = 12.;
 pub(crate) const RADIUS: f32 = 4.;
 pub(crate) const DIRECTIONS: [Vec2; 8] = [
   Vec2::new(-1., 0.),
@@ -64,37 +65,48 @@ async fn main()
   loop
   {
     // Process keys, mouse etc.
-    if animate
+
+    // This can be refactored
+    if unvisited_nodes.is_empty() { finding_path = false; }
+
+    if finding_path
     {
-      for _ in 1..=speed
+      if animate
       {
-        if !unvisited_nodes.is_empty()
-        { grid.a_star_step(&mut unvisited_nodes); }
+        for _ in 1..=speed
+        {
+          if !unvisited_nodes.is_empty()
+          { grid.a_star_step(&mut unvisited_nodes, &mut finding_path); }
+        }
       }
-    }
-    else
-    {
-      while !unvisited_nodes.is_empty()
-      { grid.a_star_step(&mut unvisited_nodes); }
+      else
+      {
+        while !unvisited_nodes.is_empty()
+        { grid.a_star_step(&mut unvisited_nodes, &mut finding_path); }
+      }
     }
 
     clear_background(Color::from_hex(BG_COLOR));
 
-    draw_rectangle(0., 0., screen_width() - 200., screen_height(), Color::from_hex(GRID_BG_COLOR));
+    draw_rectangle(0., 0., screen_width() - 196., screen_height(), Color::from_hex(GRID_BG_COLOR));
 
-    for x in 1..=GRID_WIDTH
+    for x in 0..GRID_WIDTH
     {
-      for y in 1..=GRID_HEIGHT
+      for y in 0..GRID_HEIGHT
       {
-        let node = grid.node_at(x-1, y-1);
-        if node.is_obstacle { draw_circle((x * 12) as f32, (y * 12) as f32, RADIUS, BLACK); }
-        if !node.is_obstacle && node.visited { draw_circle((x * 12) as f32, (y * 12) as f32, RADIUS, Color::from_hex(VISITED_COLOR)); }
+        let coordinates = Vec2::new(x as f32, y as f32);
+        // let coords_minus_one = coordinates - Vec2::ONE;
 
-        if utils::is_point_in_square(mouse_position().0, mouse_position().1, (x * 12) as f32, (y * 12) as f32, RADIUS)
+        let node = grid.node_at(coordinates);
+        if node.is_obstacle { draw_circle(coordinates.x * 12. + OFFSET, coordinates.y * 12. + OFFSET, RADIUS, BLACK); }
+        if !node.is_obstacle && node.visited { draw_circle((x * 12) as f32 + OFFSET, (y * 12) as f32 + OFFSET, RADIUS, Color::from_hex(VISITED_COLOR)); }
+
+        let mouse = Vec2::new(mouse_position().0, mouse_position().1);
+        if utils::is_point_in_square(mouse, Vec2::from(coordinates * 12. + OFFSET), RADIUS)
         {
           // Outlining hovered node
           if !node.is_obstacle
-          { draw_circle_lines((x * 12) as f32, (y * 12) as f32, RADIUS, 1., BLACK); }
+          { draw_circle_lines(coordinates.x * 12. + OFFSET, coordinates.y * 12. + OFFSET, RADIUS, 1., BLACK); }
 
           if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_down(MouseButton::Left)
           {
@@ -102,30 +114,59 @@ async fn main()
             {
               MouseMode::Node => node.set_to_node(),
               MouseMode::Obstacle => node.set_to_obstacle(),
-              // FIX: these panic for the last grid row
-              MouseMode::Start => grid.set_start(x-1, y-1),
-              MouseMode::End => grid.set_end(x-1, y-1)
+              MouseMode::Start => grid.set_start(coordinates),
+              MouseMode::End => grid.set_end(coordinates)
             }
           }
         }
       }
     }
 
+    unvisited_nodes.iter().for_each(|node| draw_circle(node.x*12.+OFFSET, node.y*12.+OFFSET, RADIUS, Color::from_hex(UNVISITED_COLOR)));
+
     // Paints the path
-    if let (Some(start), Some(end)) = (grid.get_start(), grid.get_end())
+    if let (Some(start), Some(current)) = (grid.get_start(), unvisited_nodes.first())
     {
-      draw_circle((start.0*12) as f32, (start.1*12) as f32, RADIUS, Color::from_hex(PATH_COLOR));
-      let current_node = grid.node_at(start.0, start.1).parent;
+      // draw_circle(current.x*12., current.y*12., RADIUS, Color::from_hex(PATH_COLOR));
+      let mut current = *current;
+      let mut parent = grid.node_at(current).parent;
+
+      loop
+      {
+        println!("current: {:?} parent: {:?}", current, parent);
+        if parent == Vec2::NEG_ONE { break; }
+
+        draw_circle(current.x*12.+OFFSET, current.y*12.*OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
+        draw_line(current.x*12.+OFFSET, current.y*12.+OFFSET, parent.x*12.+OFFSET, parent.y*12.+OFFSET, RADIUS * 2., Color::from_hex(PATH_COLOR));
+        // draw_circle(parent.x*12.+OFFSET, parent.y*12.*OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
+        current = parent;
+        parent = grid.node_at(parent).parent;
+      }
     }
 
-    if let Some((x, y)) = grid.get_start()
+    // if let (Some(start), Some(end)) = (grid.get_start(), grid.get_end())
+    // {
+    //   draw_circle(end.x*12., end.y*12., RADIUS, Color::from_hex(PATH_COLOR));
+    //   let mut current_node = end;
+    //   let mut next_node = grid.node_at(start).parent;
+
+    //   while next_node != current_node || current_node != end
+    //   {
+    //     draw_circle(current_node.x, current_node.y, RADIUS, Color::from_hex(PATH_COLOR));
+    //     draw_line(current_node.x, current_node.y, next_node.x, next_node.y, RADIUS * 2., Color::from_hex(PATH_COLOR));
+    //     current_node = next_node;
+    //     next_node = grid.node_at(next_node).parent;
+    //   }
+    // }
+
+    if let Some(start) = grid.get_start()
     {
-      draw_circle((x*12) as f32, (y*12) as f32, 4., Color::from_hex(START_COLOR));
+      draw_circle(start.x * 12. + OFFSET, start.y * 12. + OFFSET, 4., Color::from_hex(START_COLOR));
     }
 
-    if let Some((x, y)) = grid.get_end()
+    if let Some(end) = grid.get_end()
     {
-      draw_circle((x*12) as f32, (y*12) as f32, 4., Color::from_hex(END_COLOR));
+      draw_circle(end.x * 12. + OFFSET, end.y * 12. + OFFSET, 4., Color::from_hex(END_COLOR));
     }
 
     // draw_circle(60., 60., 5., ORANGE);

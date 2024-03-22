@@ -1,13 +1,14 @@
-use macroquad::math::Vec2;
+use macroquad::math::{Vec2, Vec2Swizzles};
 use rand::{rngs::ThreadRng, Rng};
 
-use crate::{node::{Direction, Node}, utils::distance, DIRECTIONS, GRID_HEIGHT, GRID_WIDTH};
+use crate::{node::Node, utils::distance, DIRECTIONS, GRID_HEIGHT, GRID_WIDTH, OFFSET};
 
 pub(crate) struct Grid
 {
   grid: [Node; GRID_WIDTH * GRID_HEIGHT],
   start: Option<Vec2>,
   end: Option<Vec2>,
+  path_length: f32,
   rng: ThreadRng,
 }
 
@@ -20,6 +21,7 @@ impl Grid
       grid: [Node::new(); GRID_WIDTH * GRID_HEIGHT],
       start: None,
       end: None,
+      path_length: f32::MAX,
       rng: rand::thread_rng()
     };
   }
@@ -29,27 +31,15 @@ impl Grid
     return &mut self.grid[(pos.y * GRID_WIDTH as f32 + pos.x) as usize];
   }
 
-  // pub fn set_to_node(&self, x: usize, y: usize)
-  // {
-  //   self.node_at(x, y).set_to_node()
-  // }
-
-  // pub fn set_to_obstacle(&self, x: usize, y: usize)
-  // {
-  //   self.node_at(x, y).set_to_obstacle();
-  // }
-
-  pub fn set_start(&mut self, mut pos: Vec2)
+  pub fn set_start(&mut self, pos: Vec2)
   {
     self.node_at(pos).set_to_node();
-    pos += Vec2::new(1., 1.);
     self.start = Some(pos);
   }
 
-  pub fn set_end(&mut self, mut pos: Vec2)
+  pub fn set_end(&mut self, pos: Vec2)
   {
     self.node_at(pos).set_to_node();
-    pos += Vec2::new(1., 1.);
     self.end = Some(pos);
   }
 
@@ -82,73 +72,46 @@ impl Grid
 
   pub fn set_random_obstacles(&mut self, ratio: f64)
   {
-    // self.grid.iter_mut()
-    //   .for_each(|cell|
-    //   {
-    //     if self.rng.gen_bool(ratio)
-    //     { *cell = Cell::Obstacle; }
-    //     else
-    //     { *cell = Cell::Node(Node::new()); }
-    //   });
-
     self.grid.iter_mut()
       .for_each(|node|
       {
-        if self.rng.gen_bool(ratio)
-        { node.set_to_obstacle(); }
-        else
-        { node.set_to_node(); }
+        if self.rng.gen_bool(ratio) { node.set_to_obstacle(); }
+        else { node.set_to_node(); }
       });
   }
 
   pub fn clear_path_data(&mut self)
   {
-    // self.grid.iter_mut()
-    //   .filter(|cell| cell.is_node())
-    //   .map(|cell| cell.unwrap())
-    //   .for_each(|mut node| {
-    //     node.visited = false;
-    //     node.heuristic = f32::MAX;
-    //     node.distance = f32::MAX;
-    //   });
-
     self.grid.iter_mut()
       .filter(|node| !node.is_obstacle)
       .for_each(|node| node.clear());
 
-    if let Some(start) = self.start
-    { self.node_at(start).distance = 0.; }
+    if let Some(start) = self.start { self.node_at(start).distance = 0.; }
   }
 
   pub fn has_neighbour(&self, pos: Vec2, direction: Vec2) -> bool
   {
-    match direction
-    {
-      Vec2{ x: 1., y: 1. } => return true,
-    };
+    let neighbour = pos + direction;
+
+    if neighbour.x < 0. ||
+      neighbour.y < 0. ||
+      neighbour.x > GRID_WIDTH as f32 ||
+      neighbour.y > GRID_HEIGHT as f32
+    { return false; }
+
+    print!(" {:?} ", neighbour);
+    return true;
   }
 
-  // TODO: refactor this
   pub fn get_unvisited_neighbours(&mut self, pos: Vec2) -> Vec<Vec2> // Vec<&mut Node>
   {
     let mut neighbours = vec![];
-
-    // let directions = vec![
-    //   Vec2::new(-1., 0.),
-    //   Vec2::new(-1., 1.),
-    //   Vec2::new(0., 1.),
-    //   Vec2::new(1., 1.),
-    //   Vec2::new(1., 0.),
-    //   Vec2::new(1., -1.),
-    //   Vec2::new(0., -1.),
-    //   Vec2::new(-1., -1.),
-    // ];
 
     DIRECTIONS.iter().for_each(|direction|
     {
       if self.has_neighbour(pos, *direction)
       {
-        let neighbour = self.node_at(pos);
+        let neighbour = self.node_at(pos + *direction);
         if !neighbour.is_obstacle && !neighbour.visited { neighbours.push(pos + *direction); }
       }
     });
@@ -156,66 +119,64 @@ impl Grid
     return neighbours;
   }
 
-  pub fn a_star_step(&mut self, unvisited_nodes: &mut Vec<(usize, usize)>)
+  /// A* algorithm
+  pub fn a_star_step(&mut self, unvisited_nodes: &mut Vec<Vec2>, finding_path: &mut bool)
   {
+    // println!("unvisited_nodes: {:?}", unvisited_nodes);
     // Determine the heuristic for each node
     unvisited_nodes.iter().for_each(|at|
     {
       let end = self.get_end().unwrap();
-      self.node_at(at.0, at.1).heuristic = distance(
-        (at.0 * 12) as f32, (at.1 * 12) as f32,
-        (end.0 + 12) as f32, (end.1 * 12) as f32);
+      self.node_at(*at).heuristic = distance(*at*12.+OFFSET, end*12.+OFFSET);
     });
 
     // Sort the unvisited nodes by their heuristic (best first)
     unvisited_nodes.sort_by(|a, b|
     {
-      let a_h = self.node_at(a.0, a.1).heuristic;
-      let b_h = self.node_at(b.0, b.1).heuristic;
+      let a_h = self.node_at(*a).heuristic;
+      let b_h = self.node_at(*b).heuristic;
       return a_h.partial_cmp(&b_h).unwrap();
     });
 
     // Remove visited nodes
-    unvisited_nodes.retain(|at| !self.node_at(at.0, at.1).visited);
+    unvisited_nodes.retain(|at| !self.node_at(*at).visited);
+    // unvisited_nodes.dedup();
 
     if unvisited_nodes.is_empty() { return; }
 
-    let current_node_coords = unvisited_nodes.swap_remove(0);
-    let mut current_node = *self.node_at(current_node_coords.0, current_node_coords.1);
+    let current_node_coordinates = *unvisited_nodes.first().unwrap();
+    self.node_at(current_node_coordinates).visited = true;
+    let current_distance = self.node_at(current_node_coordinates).distance;
 
-    current_node.visited = true;
+    // println!("current_node_coordinates: {:?}", current_node_coordinates);
 
-    for neighbour_coordinates in self.get_unvisited_neighbours(current_node_coords.0, current_node_coords.1)
+    // Visiting all unvisited neighbours of the current node
+    for neighbour_coordinates in self.get_unvisited_neighbours(current_node_coordinates)
     {
-      let neighbour = self.node_at(neighbour_coordinates.0, neighbour_coordinates.1);
+      let local_distance = current_distance + distance(current_node_coordinates*12.+OFFSET, neighbour_coordinates*12.+OFFSET);
 
-      if neighbour.distance > current_node.distance + distance(
-        (current_node_coords.0 * 12) as f32,
-        (current_node_coords.1 * 12) as f32,
-        (neighbour_coordinates.0 * 12) as f32,
-        (neighbour_coordinates.1 * 12) as f32)
+      if local_distance > self.path_length { break; }
+
+      if neighbour_coordinates == self.end.unwrap()
       {
-        neighbour.distance = current_node.distance + distance(
-        (current_node_coords.0 * 12) as f32,
-        (current_node_coords.1 * 12) as f32,
-        (neighbour_coordinates.0 * 12) as f32,
-        (neighbour_coordinates.1 * 12) as f32);
+        // self.path_length = self.node_at(self.end.unwrap()).distance;
+        // self.node_at(neighbour_coordinates).visited = false;
+        self.node_at(self.get_end().unwrap()).parent = current_node_coordinates;
+        unvisited_nodes.clear();
+        *finding_path = false;
+        return;
+      }
 
-        neighbour.parent = match (neighbour_coordinates.0 as i16 - current_node_coords.0 as i16, neighbour_coordinates.1 as i16 - current_node_coords.1 as i16)
-        {
-          (1, 1) => Direction::SouthEast,
-          (-1, -1) => Direction::NorthWest,
-          (1, -1) => Direction::SouthWest,
-          (-1, 1) => Direction::NorthEast,
-          (1, 0) => Direction::South,
-          (-1, 0) => Direction::North,
-          (0, 1) => Direction::East,
-          (0, -1) => Direction::West,
-          (_, _) => Direction::None
-        }
+      let neighbour = self.node_at(neighbour_coordinates);
+
+      unvisited_nodes.push(neighbour_coordinates);
+
+      // Core of the algorithm: update node internals, if shorter path is possible
+      if neighbour.distance > local_distance
+      {
+        neighbour.distance = local_distance;
+        neighbour.parent = current_node_coordinates;
       }
     }
-
-    // TODO: iterate thru each of the node's neighbours
   }
 }

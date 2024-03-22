@@ -22,7 +22,7 @@ impl Node
     return Node
     {
       is_obstacle: false,
-      parent: Vec2::new(0., 0.),
+      parent: Vec2::NEG_ONE,
       distance: f32::MAX,
       heuristic: f32::MAX,
       visited: false
@@ -32,7 +32,7 @@ impl Node
   pub fn clear(&mut self)
   {
     self.is_obstacle = false;
-    self.parent = Vec2::new(0., 0.);
+    self.parent = Vec2::NEG_ONE;
     self.distance = f32::MAX;
     self.heuristic = f32::MAX;
     self.visited = false;

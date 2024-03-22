@@ -58,7 +58,8 @@ pub(crate) fn paint(
 
         if ui.button("Fill grid with random obstacles").clicked()
         { grid.set_random_obstacles(*ratio); }
-        ui.add(Slider::new(ratio, 0.0..=1.0).text("Ratio"));
+        ui.label("Ratio");
+        ui.add(Slider::new(ratio, 0.0..=1.0));
         if ui.button("Clear grid").clicked()
         { grid.clear(); }
 
