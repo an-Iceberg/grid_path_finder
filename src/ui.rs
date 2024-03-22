@@ -7,6 +7,8 @@ pub(crate) fn paint(
   animate: &mut bool,
   finding_path: &mut bool,
   ratio: &mut f64,
+  unvisited_nodes: &mut Vec<macroquad::math::Vec2>,
+  speed: &mut u8,
 )
 {
   ui(|egui_context|
@@ -17,7 +19,7 @@ pub(crate) fn paint(
       ..Default::default()
     });
 
-    Window::new("Grid Path Finder")
+    Window::new("Grid Path Finder (A*)")
       .anchor(Align2::RIGHT_TOP, Vec2::new(0., 0.))
       .constrain(true)
       .collapsible(false)
@@ -57,6 +59,8 @@ pub(crate) fn paint(
         if ui.button("Fill grid with random obstacles").clicked()
         { grid.set_random_obstacles(*ratio); }
         ui.add(Slider::new(ratio, 0.0..=1.0).text("Ratio"));
+        if ui.button("Clear grid").clicked()
+        { grid.clear(); }
 
         if grid.get_start().is_some() && grid.get_end().is_some()
         {
@@ -66,10 +70,16 @@ pub(crate) fn paint(
 
           ui.horizontal(|ui|
           {
-            if ui.button("Find path").clicked()
-            { *finding_path = true; }
+            if ui.button("Find path with A*").clicked()
+            {
+              grid.clear_path_data();
+              unvisited_nodes.push(grid.get_start().unwrap()); // This is safe
+              *finding_path = true;
+            }
             ui.checkbox(animate, "Animate");
           });
+          ui.label("Speed");
+          ui.add(Slider::new(speed, 1..=10));
         }
 
         ui.add_space(10.);

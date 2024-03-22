@@ -6,7 +6,6 @@ mod grid;
 use egui_macroquad::macroquad::telemetry::disable;
 use grid::Grid;
 use macroquad::prelude::*;
-use node::{Cell, Node};
 
 fn window_configuration() -> Conf
 {
@@ -28,11 +27,23 @@ pub(crate) const AUTHORS: Option<&str> = option_env!("CARGO_PKG_AUTHORS");
 pub(crate) const BG_COLOR: u32 = 0x786478;
 pub(crate) const GRID_BG_COLOR: u32 = 0xc0a6c0;
 pub(crate) const START_COLOR: u32 = 0xff8000;
+pub(crate) const PATH_COLOR: u32 = 0xff8000;
 pub(crate) const END_COLOR: u32 = 0x00ff00;
 pub(crate) const VISITED_COLOR: u32 = 0x804080;
 pub(crate) const UNVISITED_COLOR: u32 = 0xff80ff;
 pub(crate) const GRID_WIDTH: usize = 116;
 pub(crate) const GRID_HEIGHT: usize = 74;
+pub(crate) const RADIUS: f32 = 4.;
+pub(crate) const DIRECTIONS: [Vec2; 8] = [
+  Vec2::new(-1., 0.),
+  Vec2::new(-1., 1.),
+  Vec2::new(0., 1.),
+  Vec2::new(1., 1.),
+  Vec2::new(1., 0.),
+  Vec2::new(1., -1.),
+  Vec2::new(0., -1.),
+  Vec2::new(-1., -1.),
+];
 
 #[macroquad::main(window_configuration)]
 async fn main()
@@ -44,15 +55,28 @@ async fn main()
   let mut animate = true;
   let mut finding_path = true;
   let mut ratio: f64 = 0.5;
+  let mut speed = 1;
 
-  // grid.set_cell(3, 4, Cell::Obstacle);
-  // grid.set_cell(8, 10, Cell::Obstacle);
-  // grid.set_cell(13, 20, Cell::Obstacle);
-  // grid.set_cell(GRID_WIDTH - 1, GRID_HEIGHT - 1, Cell::Obstacle);
+  let mut unvisited_nodes: Vec<Vec2> = vec![];
+  let mut path: Vec<Vec2> = vec![];
 
+  // https://www.youtube.com/watch?v=9W8hNdEUFbc
   loop
   {
     // Process keys, mouse etc.
+    if animate
+    {
+      for _ in 1..=speed
+      {
+        if !unvisited_nodes.is_empty()
+        { grid.a_star_step(&mut unvisited_nodes); }
+      }
+    }
+    else
+    {
+      while !unvisited_nodes.is_empty()
+      { grid.a_star_step(&mut unvisited_nodes); }
+    }
 
     clear_background(Color::from_hex(BG_COLOR));
 
@@ -62,27 +86,36 @@ async fn main()
     {
       for y in 1..=GRID_HEIGHT
       {
-        if grid.get_cell(x-1, y-1).is_obstacle()
-        { draw_circle((x * 12) as f32, (y * 12) as f32, 4., BLACK) }
+        let node = grid.node_at(x-1, y-1);
+        if node.is_obstacle { draw_circle((x * 12) as f32, (y * 12) as f32, RADIUS, BLACK); }
+        if !node.is_obstacle && node.visited { draw_circle((x * 12) as f32, (y * 12) as f32, RADIUS, Color::from_hex(VISITED_COLOR)); }
 
-        if utils::is_point_in_square(mouse_position().0, mouse_position().1, (x * 12) as f32, (y * 12) as f32, 4.)
+        if utils::is_point_in_square(mouse_position().0, mouse_position().1, (x * 12) as f32, (y * 12) as f32, RADIUS)
         {
           // Outlining hovered node
-          if grid.get_cell(x-1, y-1).is_node()
-          { draw_circle_lines((x * 12) as f32, (y * 12) as f32, 4., 1., BLACK); }
+          if !node.is_obstacle
+          { draw_circle_lines((x * 12) as f32, (y * 12) as f32, RADIUS, 1., BLACK); }
 
           if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_down(MouseButton::Left)
           {
             match mouse_mode
             {
-              MouseMode::Node => grid.set_cell(x-1, y-1, Cell::Node(Node::new())),
-              MouseMode::Obstacle => grid.set_cell(x-1, y-1, Cell::Obstacle),
-              MouseMode::Start => grid.set_start(x, y),
-              MouseMode::End => grid.set_end(x, y)
+              MouseMode::Node => node.set_to_node(),
+              MouseMode::Obstacle => node.set_to_obstacle(),
+              // FIX: these panic for the last grid row
+              MouseMode::Start => grid.set_start(x-1, y-1),
+              MouseMode::End => grid.set_end(x-1, y-1)
             }
           }
         }
       }
+    }
+
+    // Paints the path
+    if let (Some(start), Some(end)) = (grid.get_start(), grid.get_end())
+    {
+      draw_circle((start.0*12) as f32, (start.1*12) as f32, RADIUS, Color::from_hex(PATH_COLOR));
+      let current_node = grid.node_at(start.0, start.1).parent;
     }
 
     if let Some((x, y)) = grid.get_start()
@@ -115,6 +148,8 @@ async fn main()
       &mut animate,
       &mut finding_path,
       &mut ratio,
+      &mut unvisited_nodes,
+      &mut speed,
     );
 
     // Draw things before egui

@@ -14,11 +14,16 @@ pub(crate) fn is_point_in_square(
   size: f32
 ) -> bool
 {
-  if point_x < square_x - (size / 2.) - 2. ||
-    point_y < square_y - (size / 2.) - 2. ||
-    point_x > square_x + (size / 2.) + 2. ||
-    point_y > square_y + (size / 2.) + 2.
+  if point_x < square_x - (size / 2.) - 3. ||
+    point_y < square_y - (size / 2.) - 3. ||
+    point_x > square_x + (size / 2.) + 3. ||
+    point_y > square_y + (size / 2.) + 3.
   { return false;}
 
   return true;
+}
+
+pub(crate) fn distance(x1: f32, y1: f32, x2: f32, y2: f32) -> f32
+{
+  return ((x2-x1).powi(2) + (y2-y1).powi(2)).sqrt();
 }
