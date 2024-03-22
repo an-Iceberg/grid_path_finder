@@ -60,8 +60,12 @@ pub(crate) fn paint(
         { grid.set_random_obstacles(*ratio); }
         ui.label("Ratio");
         ui.add(Slider::new(ratio, 0.0..=1.0));
+        // TODO: clear all visited/unvisited nodes
         if ui.button("Clear grid").clicked()
-        { grid.clear(); }
+        {
+          grid.clear();
+          unvisited_nodes.clear();
+        }
 
         if grid.get_start().is_some() && grid.get_end().is_some()
         {
@@ -74,11 +78,13 @@ pub(crate) fn paint(
             if ui.button("Find path with A*").clicked()
             {
               grid.clear_path_data();
+              unvisited_nodes.clear();
               unvisited_nodes.push(grid.get_start().unwrap()); // This is safe
               *finding_path = true;
             }
             ui.checkbox(animate, "Animate");
           });
+          ui.button("Clear path");
           ui.label("Speed");
           ui.add(Slider::new(speed, 1..=10));
         }

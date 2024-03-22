@@ -99,7 +99,6 @@ impl Grid
       neighbour.y > GRID_HEIGHT as f32
     { return false; }
 
-    print!(" {:?} ", neighbour);
     return true;
   }
 
@@ -119,6 +118,7 @@ impl Grid
     return neighbours;
   }
 
+  // FIX: don't use cells outside the grid
   /// A* algorithm
   pub fn a_star_step(&mut self, unvisited_nodes: &mut Vec<Vec2>, finding_path: &mut bool)
   {
@@ -155,6 +155,7 @@ impl Grid
     {
       let local_distance = current_distance + distance(current_node_coordinates*12.+OFFSET, neighbour_coordinates*12.+OFFSET);
 
+      // If a path has been found, don't explore any paths that are longer than the found one
       if local_distance > self.path_length { break; }
 
       if neighbour_coordinates == self.end.unwrap()
@@ -163,6 +164,7 @@ impl Grid
         // self.node_at(neighbour_coordinates).visited = false;
         self.node_at(self.get_end().unwrap()).parent = current_node_coordinates;
         unvisited_nodes.clear();
+        unvisited_nodes.push(self.get_end().unwrap());
         *finding_path = false;
         return;
       }

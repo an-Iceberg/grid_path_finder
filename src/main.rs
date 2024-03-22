@@ -3,6 +3,8 @@ mod node;
 mod utils;
 mod grid;
 
+use std::collections::HashSet;
+
 use egui_macroquad::macroquad::telemetry::disable;
 use grid::Grid;
 use macroquad::prelude::*;
@@ -59,6 +61,7 @@ async fn main()
   let mut speed = 1;
 
   let mut unvisited_nodes: Vec<Vec2> = vec![];
+  let mut current_node = Vec2::NEG_ONE;
   let mut path: Vec<Vec2> = vec![];
 
   // https://www.youtube.com/watch?v=9W8hNdEUFbc
@@ -124,6 +127,10 @@ async fn main()
 
     unvisited_nodes.iter().for_each(|node| draw_circle(node.x*12.+OFFSET, node.y*12.+OFFSET, RADIUS, Color::from_hex(UNVISITED_COLOR)));
 
+    // TODO: improve drawing
+    // TODO: use sets for visited/unvisited nodes
+    // TODO: use separatedata structures for algorithm and painting
+
     // Paints the path
     if let (Some(start), Some(current)) = (grid.get_start(), unvisited_nodes.first())
     {
@@ -133,31 +140,16 @@ async fn main()
 
       loop
       {
-        println!("current: {:?} parent: {:?}", current, parent);
+        // println!("current: {:?} parent: {:?}", current, parent);
         if parent == Vec2::NEG_ONE { break; }
 
-        draw_circle(current.x*12.+OFFSET, current.y*12.*OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
         draw_line(current.x*12.+OFFSET, current.y*12.+OFFSET, parent.x*12.+OFFSET, parent.y*12.+OFFSET, RADIUS * 2., Color::from_hex(PATH_COLOR));
+        draw_circle(current.x*12.+OFFSET, current.y*12.+OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
         // draw_circle(parent.x*12.+OFFSET, parent.y*12.*OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
         current = parent;
         parent = grid.node_at(parent).parent;
       }
     }
-
-    // if let (Some(start), Some(end)) = (grid.get_start(), grid.get_end())
-    // {
-    //   draw_circle(end.x*12., end.y*12., RADIUS, Color::from_hex(PATH_COLOR));
-    //   let mut current_node = end;
-    //   let mut next_node = grid.node_at(start).parent;
-
-    //   while next_node != current_node || current_node != end
-    //   {
-    //     draw_circle(current_node.x, current_node.y, RADIUS, Color::from_hex(PATH_COLOR));
-    //     draw_line(current_node.x, current_node.y, next_node.x, next_node.y, RADIUS * 2., Color::from_hex(PATH_COLOR));
-    //     current_node = next_node;
-    //     next_node = grid.node_at(next_node).parent;
-    //   }
-    // }
 
     if let Some(start) = grid.get_start()
     {
@@ -168,20 +160,6 @@ async fn main()
     {
       draw_circle(end.x * 12. + OFFSET, end.y * 12. + OFFSET, 4., Color::from_hex(END_COLOR));
     }
-
-    // draw_circle(60., 60., 5., ORANGE);
-    // draw_circle(120., 120., 5., ORANGE);
-    // draw_circle(120., 320., 5., ORANGE);
-    // draw_circle(400., 60., 5., ORANGE);
-
-    // draw_line(60., 60., 120., 120., 10., ORANGE);
-    // draw_line(120., 120., 120., 320., 10., ORANGE);
-    // draw_line(120., 120., 400., 60., 10., ORANGE);
-
-    // draw_hexagon(500., 500., 10., 0., true, ORANGE, ORANGE);
-    // draw_hexagon(550., 600., 10., 0., true, ORANGE, ORANGE);
-
-    // draw_line(500., 500., 550., 600., 20., ORANGE);
 
     ui::paint(
       &mut mouse_mode,
