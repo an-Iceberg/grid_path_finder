@@ -5,9 +5,8 @@ pub(crate) fn paint(
   mouse_mode: &mut MouseMode,
   grid: &mut Grid,
   animate: &mut bool,
-  finding_path: &mut bool,
   ratio: &mut f64,
-  unvisited_nodes: &mut Vec<macroquad::math::Vec2>,
+  // unvisited_nodes: &mut Vec<macroquad::math::Vec2>,
   speed: &mut u8,
 )
 {
@@ -61,11 +60,7 @@ pub(crate) fn paint(
         ui.label("Ratio");
         ui.add(Slider::new(ratio, 0.0..=1.0));
         // TODO: clear all visited/unvisited nodes
-        if ui.button("Clear grid").clicked()
-        {
-          grid.clear();
-          unvisited_nodes.clear();
-        }
+        if ui.button("Clear grid").clicked() { grid.clear(); }
 
         if grid.get_start().is_some() && grid.get_end().is_some()
         {
@@ -78,13 +73,11 @@ pub(crate) fn paint(
             if ui.button("Find path with A*").clicked()
             {
               grid.clear_path_data();
-              unvisited_nodes.clear();
-              unvisited_nodes.push(grid.get_start().unwrap()); // This is safe
-              *finding_path = true;
+              grid.find_path();
             }
             ui.checkbox(animate, "Animate");
           });
-          ui.button("Clear path");
+          if ui.button("Clear path").clicked() { grid.clear_path_data(); }
           ui.label("Speed");
           ui.add(Slider::new(speed, 1..=10));
         }
