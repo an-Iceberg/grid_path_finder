@@ -1,5 +1,7 @@
 use macroquad::math::Vec2;
 
+use crate::OFFSET;
+
 // pub(crate) fn is_point_in_circle(
 //   point_x: f32, point_y: f32,
 //   circle_x: f32, circle_y: f32,
@@ -50,4 +52,19 @@ pub(crate) fn is_point_in_square(point: &Vec2, square_center: &Vec2, size: f32) 
 pub(crate) fn distance(v1: &Vec2, v2: &Vec2) -> f32
 {
   return ((v2.x - v1.x).powi(2) + (v2.y-v1.y).powi(2)).sqrt();
+}
+
+pub(crate) fn offset(n: f32) -> f32
+{
+  return n * 12. + OFFSET;
+}
+
+pub(crate) fn offset_vec(v: &Vec2) -> Vec2
+{
+  let mut new_v = Vec2::new(v.x, v.y);
+  new_v.x *= 12.;
+  new_v.y *= 12.;
+  new_v.x += OFFSET;
+  new_v.y += OFFSET;
+  return new_v;
 }

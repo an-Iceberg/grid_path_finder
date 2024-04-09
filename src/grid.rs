@@ -1,6 +1,6 @@
 use macroquad::math::Vec2;
 use rand::{rngs::ThreadRng, Rng};
-use crate::{node::Node, utils::distance, DIRECTIONS, GRID_HEIGHT, GRID_WIDTH, OFFSET};
+use crate::{node::Node, utils::{distance, offset_vec}, DIRECTIONS, GRID_HEIGHT, GRID_WIDTH};
 
 pub(crate) struct Grid
 {
@@ -11,6 +11,7 @@ pub(crate) struct Grid
   unvisited_nodes: Vec<Vec2>,
   rng: ThreadRng,
   finding_path: bool,
+  // todo: found_path: bool
 }
 
 // TODO: convert all Vec2 to &Vec2
@@ -37,7 +38,7 @@ impl Grid
 
   pub fn set_start(&mut self, pos: &Vec2)
   {
-    self.node_at(pos).set_to_node();
+    self.grid[Self::pos_to_idx(pos)].set_to_node();
     self.start = Some(*pos);
   }
 
@@ -49,11 +50,17 @@ impl Grid
 
   pub fn clear_start(&mut self)
   {
+    if let Some(start) = self.start
+    { self.grid[Self::pos_to_idx(&start)].set_to_node(); }
+
     self.start = None;
   }
 
   pub fn clear_end(&mut self)
   {
+    if let Some(end) = self.end
+    { self.grid[Self::pos_to_idx(&end)].set_to_node(); }
+
     self.end = None;
   }
 
@@ -73,11 +80,14 @@ impl Grid
     self.start = None;
     self.end = None;
     self.unvisited_nodes.clear();
+    self.finding_path = false;
+    self.path_length = f32::MAX;
   }
 
   pub fn find_path(&mut self)
   {
     self.finding_path = true;
+    self.grid[Self::pos_to_idx(&self.start.unwrap())].distance = Some(0.);
   }
 
   pub fn get_current_node(&self) -> Option<&Vec2>
@@ -98,16 +108,24 @@ impl Grid
   pub fn get_current_path(&self) -> Option<Vec<Vec2>>
   {
     let mut current_path = vec![];
+
     match self.unvisited_nodes.last()
     {
-      Some(node) => current_path.push(node),
-      None => ()
+      Some(current) => current_path.push(*current),
+      None => return None,
     }
-    if current_path.is_empty() { return None; }
 
-    // todo: get current path
+    loop
+    {
+      if let Some(last) = current_path.last()
+      {
+        if let Some(parent) = self.grid[Self::pos_to_idx(last)].parent
+        { current_path.push(parent); }
+        else { break; }
+      }
+    }
 
-    todo!()
+    return Some(current_path);
   }
 
   pub fn set_random_obstacles(&mut self, ratio: f64)
@@ -133,6 +151,9 @@ impl Grid
       self.grid[Self::pos_to_idx(&start)].distance = None;
       self.unvisited_nodes.push(start);
     }
+
+    self.finding_path = false;
+    self.path_length = f32::MAX;
     // if let Some(start) = self.start { self.node_at(&start).distance = 0.; }
   }
 
@@ -153,30 +174,18 @@ impl Grid
   {
     let mut neighbours = vec![];
 
-    // DIRECTIONS.iter().for_each(|direction|
-    // {
-    //   if self.has_neighbour(pos, direction)
-    //   {
-    //     // let neighbour = self.node_at(&(*pos + *direction));
-    //     let neighbour = self.grid[Self::pos_to_idx(&(*pos + *direction))];
-    //     if !neighbour.is_obstacle && !neighbour.visited { neighbours.push(*pos + *direction); }
-    //   }
-    // });
-
     DIRECTIONS.iter()
       .filter(|dir| self.has_neighbour(pos, dir))
-      .for_each(|direction|
-      {
-        let neighbour = self.grid[Self::pos_to_idx(&(*pos + *direction))];
-        if !neighbour.is_obstacle && !neighbour.visited { neighbours.push(*pos + *direction); }
-      });
+      .map(|dir| (self.grid[Self::pos_to_idx(&(*pos + *dir))], dir))
+      .filter(|(neighbour, _)| !neighbour.is_obstacle && !neighbour.visited)
+      .for_each(|(_, dir)| neighbours.push(*pos + *dir));
 
     return neighbours;
   }
 
-  pub fn is_unvisited_nodes_empty(&mut self) -> bool
+  pub fn has_unvisited_nodes(&mut self) -> bool
   {
-    return self.unvisited_nodes.is_empty();
+    return !self.unvisited_nodes.is_empty();
   }
 
   fn pos_to_idx(pos: &Vec2) -> usize
@@ -185,6 +194,7 @@ impl Grid
   }
 
   // FIX: don't use cells outside the grid
+  // Fix: make it go in directions other than bottom left
   /// A* algorithm
   pub fn a_star_step(&mut self)
   {
@@ -202,7 +212,7 @@ impl Grid
         // self.node_at(at).heuristic = distance(*at*12.+OFFSET, end*12.+OFFSET);
         if self.grid[Self::pos_to_idx(at)].heuristic.is_none()
         {
-          self.grid[Self::pos_to_idx(at)].heuristic = Some(distance(&(*at*12.+OFFSET), &(end*12.+OFFSET)));
+          self.grid[Self::pos_to_idx(at)].heuristic = Some(distance(&offset_vec(at), &offset_vec(&end)));
         }
       });
 
@@ -225,8 +235,8 @@ impl Grid
     }
 
     let current_coords = *self.unvisited_nodes.first().unwrap();
-    // self.node_at(&current_node_coordinates).visited = true;
     self.grid[Self::pos_to_idx(&current_coords)].visited = true;
+
     // let current_distance = self.node_at(&current_coords).distance;
     let current_distance = match self.grid[Self::pos_to_idx(&current_coords)].distance
     {
@@ -234,48 +244,37 @@ impl Grid
       None => f32::MAX
     };
 
+    // Fix: distance should be 0. without this
+    // if current_coords == start { current_distance = 0.; }
+
     // Visiting all unvisited neighbours of the current node
     for neighbour_coordinates in self.get_unvisited_neighbours(&current_coords)
     {
-      let local_distance = current_distance + distance(&(current_coords*12.+OFFSET), &(neighbour_coordinates*12.+OFFSET));
+      // let local_distance = current_distance + distance(&(current_coords*12.+OFFSET), &(neighbour_coordinates*12.+OFFSET));
+
+      // Fix: set local distance to lower value
+      let local_distance = if current_distance == f32::MAX { current_distance }
+      else
+      { current_distance + distance(&offset_vec(&current_coords), &offset_vec(&neighbour_coordinates)) };
 
       // If a path has been found, don't explore any paths that are longer than the found one
       if local_distance > self.path_length { continue; }
 
-      if neighbour_coordinates == end
-      {
-        // self.path_length = self.node_at(self.end.unwrap()).distance;
-        // self.node_at(neighbour_coordinates).visited = false;
-        // self.node_at(&self.get_end().unwrap()).parent = current_coords;
-        self.grid[Self::pos_to_idx(&end)].parent = Some(current_coords);
-        self.unvisited_nodes.clear();
-        self.unvisited_nodes.push(end);
-        self.finding_path = false;
-        return;
-      }
+      println!("path_length:{} local_distance:{}", self.path_length, local_distance);
 
-      let mut neighbour = self.grid[Self::pos_to_idx(&neighbour_coordinates)];
+      // We have reached a path. In order to find the shortest, we have to explore further
+      if neighbour_coordinates == end
+      { self.path_length = local_distance; }
+
+      let neighbour = &mut self.grid[Self::pos_to_idx(&neighbour_coordinates)];
 
       self.unvisited_nodes.push(neighbour_coordinates);
 
       // Core of the algorithm: update node internals, if shorter path is possible
-      match neighbour.distance
-      {
-        Some(dist) =>
-        {
-          if dist > local_distance
-          {
-            neighbour.distance = Some(local_distance);
-            neighbour.parent = Some(current_coords);
-          }
-        }
-        None => neighbour.distance = Some(local_distance)
-      }
-      // if neighbour.distance > local_distance
-      // {
-      //   neighbour.distance = local_distance;
-      //   neighbour.parent = Some(current_coords);
-      // }
+      if let Some(dist) = neighbour.distance { if dist < local_distance { return; } }
+
+      neighbour.parent = Some(current_coords);
+      neighbour.distance = Some(local_distance);
     }
   }
 }

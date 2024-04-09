@@ -6,6 +6,9 @@ mod grid;
 use egui_macroquad::macroquad::telemetry::disable;
 use grid::Grid;
 use macroquad::prelude::*;
+use utils::offset_vec;
+
+use crate::utils::offset;
 
 fn window_configuration() -> Conf
 {
@@ -48,6 +51,7 @@ pub(crate) const DIRECTIONS: [Vec2; 8] = [
 
 // TODO: don't draw unvisited nodes
 // TODO: make unvisited_nodes a data field of the Grid struct
+// TODO: tests
 
 #[macroquad::main(window_configuration)]
 async fn main()
@@ -72,18 +76,12 @@ async fn main()
       {
         for _ in 1..=speed
         {
-          // if !unvisited_nodes.is_empty()
-          // { current_node = grid.a_star_step(&mut finding_path); }
-          // if !grid.is_unvisited_nodes_empty() { current_node = grid.a_star_step(&mut finding_path) }
-          if !grid.is_unvisited_nodes_empty() { grid.a_star_step(); }
+          if grid.has_unvisited_nodes() { grid.a_star_step(); }
         }
       }
       else
       {
-        // while !unvisited_nodes.is_empty()
-        // { grid.a_star_step(&mut finding_path); }
-        // while !grid.is_unvisited_nodes_empty() { current_node = grid.a_star_step(&mut finding_path) }
-        while !grid.is_unvisited_nodes_empty() { grid.a_star_step(); }
+        while grid.has_unvisited_nodes() { grid.a_star_step(); }
       }
     }
 
@@ -99,15 +97,20 @@ async fn main()
         // let coords_minus_one = coordinates - Vec2::ONE;
 
         let node = grid.node_at(&coordinates);
-        if node.is_obstacle { draw_circle(coordinates.x * 12. + OFFSET, coordinates.y * 12. + OFFSET, RADIUS, BLACK); }
-        if !node.is_obstacle && node.visited { draw_circle((x * 12) as f32 + OFFSET, (y * 12) as f32 + OFFSET, RADIUS, Color::from_hex(VISITED_COLOR)); }
+        if node.is_obstacle { draw_circle(offset(coordinates.x), offset(coordinates.y), RADIUS, BLACK); }
+        if !node.is_obstacle && node.visited { draw_circle(offset(x as f32), offset(y as f32), RADIUS, Color::from_hex(VISITED_COLOR)); }
+        // ToDo {optional}: draw thin line from node to parent
+        // if let Some(parent) = node.parent
+        // {
+        //   draw_line(offset(coordinates.x), offset(coordinates.y), offset(parent.x), offset(parent.y), 1., RED);
+        // }
 
         let mouse = Vec2::new(mouse_position().0, mouse_position().1);
-        if utils::is_point_in_square(&mouse, &Vec2::from(coordinates * 12. + OFFSET), RADIUS)
+        if utils::is_point_in_square(&mouse, &offset_vec(&coordinates), RADIUS)
         {
           // Outlining hovered node
           if !node.is_obstacle
-          { draw_circle_lines(coordinates.x * 12. + OFFSET, coordinates.y * 12. + OFFSET, RADIUS, 1., BLACK); }
+          { draw_circle_lines(offset(coordinates.x), offset(coordinates.y), RADIUS, 1., BLACK); }
 
           if is_mouse_button_pressed(MouseButton::Left) || is_mouse_button_down(MouseButton::Left)
           {
@@ -123,8 +126,6 @@ async fn main()
       }
     }
 
-    // unvisited_nodes.iter().for_each(|node| draw_circle(node.x*12.+OFFSET, node.y*12.+OFFSET, RADIUS, Color::from_hex(UNVISITED_COLOR)));
-
     // TODO: improve drawing
     // TODO: use sets for visited/unvisited nodes
     // TODO: use separatedata structures for algorithm and painting
@@ -133,40 +134,22 @@ async fn main()
     // Paints the path
     if let Some(path) = grid.get_current_path()
     {
-    }
-
-    if let Some(current) = grid.get_current_node()
-    {
-      let current = current;
-      let mut parent_opt = grid.get_parent(&current);
-
-      loop
-      {
-        // println!("current: {:?} parent: {:?}", current, parent);
-        if parent_opt.is_none() { break; }
-
-        if let Some(parent) = parent_opt
+      path.iter().zip(path.iter().skip(1))
+        .for_each(|(a, b)|
         {
-          // println!("current: {:?} parent: {:?}", current, parent);
-          // Drawing line with rounded corners between current and parent node
-          draw_line(current.x*12.+OFFSET, current.y*12.+OFFSET, parent.x*12.+OFFSET, parent.y*12.+OFFSET, RADIUS * 2., Color::from_hex(PATH_COLOR));
-          draw_circle(current.x*12.+OFFSET, current.y*12.+OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
-          // Moving on to the next parent pair
-          let current = &parent;
-          parent_opt = grid.get_parent(&current);
-        }
-        // draw_circle(parent.x*12.+OFFSET, parent.y*12.*OFFSET, RADIUS, Color::from_hex(PATH_COLOR));
-      }
+          draw_line(offset(a.x), offset(a.y), offset(b.x), offset(b.y), RADIUS * 2., Color::from_hex(PATH_COLOR));
+          draw_circle(offset(a.x), offset(a.y), RADIUS, Color::from_hex(PATH_COLOR));
+        });
     }
 
     if let Some(start) = grid.get_start()
     {
-      draw_circle(start.x * 12. + OFFSET, start.y * 12. + OFFSET, 4., Color::from_hex(START_COLOR));
+      draw_circle(offset(start.x), offset(start.y), 4., Color::from_hex(START_COLOR));
     }
 
     if let Some(end) = grid.get_end()
     {
-      draw_circle(end.x * 12. + OFFSET, end.y * 12. + OFFSET, 4., Color::from_hex(END_COLOR));
+      draw_circle(offset(end.x), offset(end.y), 4., Color::from_hex(END_COLOR));
     }
 
     ui::paint(
@@ -174,7 +157,6 @@ async fn main()
       &mut grid,
       &mut animate,
       &mut ratio,
-      // &mut unvisited_nodes,
       &mut speed,
     );
 
