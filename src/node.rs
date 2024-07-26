@@ -19,14 +19,14 @@ impl Node
 {
   pub fn new() -> Self
   {
-    return Node
+    Node
     {
       is_obstacle: false,
       parent: None,
       distance: None,
       heuristic: None,
       visited: false
-    };
+    }
   }
 
   pub fn clear(&mut self)

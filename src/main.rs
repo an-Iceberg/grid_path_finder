@@ -2,6 +2,8 @@ mod ui;
 mod node;
 mod utils;
 mod grid;
+#[path ="tests/grid_tests.rs"]
+mod grid_tests;
 
 use egui_macroquad::macroquad::telemetry::disable;
 use grid::Grid;
@@ -12,7 +14,7 @@ use crate::utils::offset;
 
 fn window_configuration() -> Conf
 {
-  return Conf
+  Conf
   {
     window_title: "Grid Path Finder".to_string(),
     window_width: 1600,
@@ -21,7 +23,7 @@ fn window_configuration() -> Conf
     window_resizable: false,
     sample_count: 8,
     ..Conf::default()
-  };
+  }
 }
 
 pub(crate) const VERSION: Option<&str> = option_env!("CARGO_PKG_VERSION");
@@ -170,6 +172,11 @@ async fn main()
   }
 }
 
+// ToDo: add Count to Obstacle
 #[derive(PartialEq, Eq)]
 pub(crate) enum MouseMode
 { Node, Obstacle, Start, End }
+
+#[derive(PartialEq, Eq)]
+pub(crate) enum Count
+{ One, Four, Nine }

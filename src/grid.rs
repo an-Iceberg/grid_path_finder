@@ -4,6 +4,7 @@ use crate::{node::Node, utils::{distance, offset_vec}, DIRECTIONS, GRID_HEIGHT, 
 
 pub(crate) struct Grid
 {
+  // Note: Rc<[Node]> ?
   grid: [Node; GRID_WIDTH * GRID_HEIGHT],
   start: Option<Vec2>,
   end: Option<Vec2>,
@@ -17,6 +18,7 @@ pub(crate) struct Grid
 // TODO: convert all Vec2 to &Vec2
 impl Grid
 {
+  #[allow(clippy::needless_return)]
   pub fn new() -> Self
   {
     return Grid
@@ -31,49 +33,61 @@ impl Grid
     };
   }
 
+  #[allow(clippy::needless_return)]
   pub fn node_at(&mut self, pos: &Vec2) -> &mut Node
   {
     return &mut self.grid[(pos.y * GRID_WIDTH as f32 + pos.x) as usize];
   }
 
+  #[allow(clippy::needless_return)]
   pub fn set_start(&mut self, pos: &Vec2)
   {
     self.grid[Self::pos_to_idx(pos)].set_to_node();
     self.start = Some(*pos);
   }
 
+  #[allow(clippy::needless_return)]
   pub fn set_end(&mut self, pos: &Vec2)
   {
     self.node_at(pos).set_to_node();
     self.end = Some(*pos);
   }
 
+  #[allow(clippy::needless_return)]
   pub fn clear_start(&mut self)
   {
     if let Some(start) = self.start
     { self.grid[Self::pos_to_idx(&start)].set_to_node(); }
 
     self.start = None;
+
+    self.clear_path_data();
   }
 
+  #[allow(clippy::needless_return)]
   pub fn clear_end(&mut self)
   {
     if let Some(end) = self.end
     { self.grid[Self::pos_to_idx(&end)].set_to_node(); }
 
     self.end = None;
+
+    self.clear_path_data();
   }
 
+  #[allow(clippy::needless_return)]
   pub fn get_start(&self) -> Option<Vec2>
   {
     return self.start;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn get_end(&self) -> Option<Vec2>
   {
     return self.end;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn clear(&mut self)
   {
     self.grid = [Node::new(); GRID_WIDTH * GRID_HEIGHT];
@@ -84,29 +98,37 @@ impl Grid
     self.path_length = f32::MAX;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn find_path(&mut self)
   {
     self.finding_path = true;
     self.grid[Self::pos_to_idx(&self.start.unwrap())].distance = Some(0.);
   }
 
+  #[allow(clippy::needless_return)]
   pub fn get_current_node(&self) -> Option<&Vec2>
   {
     return self.unvisited_nodes.last();
   }
 
+  #[allow(clippy::needless_return)]
   pub fn finding_path(&self) -> bool
   {
     return self.finding_path;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn get_parent(&self, at: &Vec2) -> Option<Vec2>
   {
     return self.grid[Self::pos_to_idx(at)].parent;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn get_current_path(&self) -> Option<Vec<Vec2>>
   {
+    // ToDo: Some, if current_path != empty
+    // If current_path is empty, then end.parent Some
+    // Else -> None
     let mut current_path = vec![];
 
     match self.unvisited_nodes.last()
@@ -128,6 +150,7 @@ impl Grid
     return Some(current_path);
   }
 
+  #[allow(clippy::needless_return)]
   pub fn set_random_obstacles(&mut self, ratio: f64)
   {
     self.grid.iter_mut()
@@ -138,6 +161,7 @@ impl Grid
       });
   }
 
+  #[allow(clippy::needless_return)]
   pub fn clear_path_data(&mut self)
   {
     self.grid.iter_mut()
@@ -157,6 +181,7 @@ impl Grid
     // if let Some(start) = self.start { self.node_at(&start).distance = 0.; }
   }
 
+  #[allow(clippy::needless_return)]
   pub fn has_neighbour(&self, pos: &Vec2, direction: &Vec2) -> bool
   {
     let neighbour = *pos + *direction;
@@ -170,6 +195,7 @@ impl Grid
     return true;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn get_unvisited_neighbours(&mut self, pos: &Vec2) -> Vec<Vec2> // Vec<&mut Node>
   {
     let mut neighbours = vec![];
@@ -183,11 +209,13 @@ impl Grid
     return neighbours;
   }
 
+  #[allow(clippy::needless_return)]
   pub fn has_unvisited_nodes(&mut self) -> bool
   {
     return !self.unvisited_nodes.is_empty();
   }
 
+  #[allow(clippy::needless_return)]
   fn pos_to_idx(pos: &Vec2) -> usize
   {
     return (pos.y * GRID_WIDTH as f32 + pos.x) as usize;
@@ -196,6 +224,7 @@ impl Grid
   // FIX: don't use cells outside the grid
   // Fix: make it go in directions other than bottom left
   /// A* algorithm
+  #[allow(clippy::needless_return)]
   pub fn a_star_step(&mut self)
   {
     if !self.finding_path { return; }
@@ -221,7 +250,7 @@ impl Grid
     {
       let a_h = self.grid[Self::pos_to_idx(a)].heuristic;
       let b_h = self.grid[Self::pos_to_idx(b)].heuristic;
-      return a_h.partial_cmp(&b_h).unwrap();
+      a_h.partial_cmp(&b_h).unwrap()
     });
 
     // Remove visited nodes
@@ -260,7 +289,7 @@ impl Grid
       // If a path has been found, don't explore any paths that are longer than the found one
       if local_distance > self.path_length { continue; }
 
-      println!("path_length:{} local_distance:{}", self.path_length, local_distance);
+      // println!("path_length:{} local_distance:{}", self.path_length, local_distance);
 
       // We have reached a path. In order to find the shortest, we have to explore further
       if neighbour_coordinates == end
