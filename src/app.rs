@@ -1,4 +1,5 @@
 use eframe::{App, CreationContext, Frame};
+use egui::{Margin, Rounding, Stroke};
 #[allow(unused_imports)] // TODO: remove when time comes
 use egui::{pos2, vec2, Align2, CentralPanel, Color32, Context, RichText, Shadow, Shape, SidePanel, Ui, Visuals, Window};
 use crate::{node::Node, AUTHORS, REPOSITORY, VERSION};
@@ -44,33 +45,40 @@ impl App for GridPathFinder
     SidePanel::right("my_right_panel")
       .resizable(false)
       .exact_width(170.)
-      .show(ctx, |ui|
-      {
-        ui.heading("Grid Path Finder");
-        ui.separator();
+    .show(ctx, |ui|
+    {
+      ui.heading("Grid Path Finder");
+      ui.separator();
+      ui.add_space(20.);
 
-        ui.heading("Controls");
-        ui.add_space(20.);
+      ui.heading("Controls");
+      ui.add_space(20.);
 
-        ui.heading("Stats");
-        ui.monospace(RichText::new(format!("fps:{:>7.2}", 1./δ_time)));
-        ui.add_space(20.);
+      ui.heading("Stats");
+      ui.monospace(RichText::new(format!("fps:{:>7.2}", 1./δ_time)));
+      ui.add_space(20.);
 
-        credits(ui);
-      });
+      credits(ui);
+    });
 
     CentralPanel::default().show(ctx, |ui|
     {
       // Canvas to draw on
-      egui::Frame::canvas(ui.style()).show(ui, |ui|
+      egui::Frame::canvas(ui.style())
+        .fill(Color32::from_rgb(110, 80, 30))
+        // .rounding(Rounding{nw: 20., ne: 20., sw: 20., se: 20.})
+      .show(ui, |ui|
       {
-        ui.ctx().request_repaint();
+        ui.allocate_space(ui.available_size());
 
         let mut shapes = vec![];
 
         shapes.push(Shape::circle_filled(pos2(100., 200.), 20., Color32::from_rgb(128, 0, 255)));
+        shapes.push(Shape::circle_stroke(pos2(200., 100.), 5., Stroke::new(1., Color32::WHITE)));
 
         ui.painter().extend(shapes);
+
+        ui.ctx().request_repaint();
       });
 
       // Window::new("Balls")
@@ -110,7 +118,7 @@ fn credits(ui: &mut Ui)
       .on_hover_text(AUTHORS.unwrap());
   });
 
-  ui.hyperlink_to("GitHub repository", REPOSITORY.unwrap())
+  ui.hyperlink_to("GitHub repository link ⇗", REPOSITORY.unwrap())
     .on_hover_text(REPOSITORY.unwrap());
 
   // egui & eframe
