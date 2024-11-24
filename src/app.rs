@@ -1,4 +1,5 @@
 use eframe::{App, CreationContext, Frame};
+#[allow(unused_imports)] // TODO: remove when time comes
 use egui::{pos2, vec2, Align2, CentralPanel, Color32, Context, RichText, Shadow, Shape, SidePanel, Ui, Visuals, Window};
 use crate::{node::Node, AUTHORS, REPOSITORY, VERSION};
 
@@ -34,6 +35,7 @@ impl App for GridPathFinder
   {
     let δ_time = frame.info().cpu_usage.unwrap_or(0.001);
     let screen_rect = ctx.input(|i: &egui::InputState| i.screen_rect());
+    #[allow(unused_variables)] // TODO: remove when time comes
     let (screen_width, screen_height) = (screen_rect.width(), screen_rect.height());
 
     // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
