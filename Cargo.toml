@@ -21,6 +21,7 @@ eframe = { version = "0.28", default-features = false, features = [
 rand = "0.8.5"
 getrandom = { version = "0.2", features = ["js"] }
 log = "0.4"
+itertools = "0.13.0"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -20,7 +20,7 @@ fn main() -> eframe::Result
   };
 
   return eframe::run_native(
-    "eframe template",
+    "Grid Path Finder",
     native_options,
     Box::new(|cc| Ok(Box::new(grid_path_finder::GridPathFinder::new(cc)))),
   );
