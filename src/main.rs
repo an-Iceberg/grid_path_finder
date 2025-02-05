@@ -1,8 +1,8 @@
 #![warn(clippy::all, rust_2018_idioms)]
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+#![allow(clippy::needless_return)]
 
 // When compiling natively:
-#[allow(clippy::needless_return)]
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result
 {
@@ -27,7 +27,6 @@ fn main() -> eframe::Result
 }
 
 // When compiling to web using trunk:
-#[allow(clippy::needless_return)]
 #[cfg(target_arch = "wasm32")]
 fn main()
 {

@@ -1,7 +1,7 @@
 [package]
 name = "grid_path_finder"
 version = "2.0.0"
-authors = ["Sandra | Laila | (Priscilla)"]
+authors = ["Priscilla (Laila, Sandra)"]
 repository = "https://github.com/an-Iceberg/grid_path_finder"
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]

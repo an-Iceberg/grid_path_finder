@@ -13,8 +13,10 @@ pub struct GridPathFinder
   gap_size: f32,
   window_edge_offset: f32,
   ui_width: f32,
-  x_cell_count: i32,
-  y_cell_count: i32,
+  /// How many cells are on the x axis
+  grid_width: i32,
+  /// How many cells are on the y axis
+  grid_height: i32,
 
   grid: Vec<Cell>,
 }
@@ -22,7 +24,6 @@ pub struct GridPathFinder
 impl GridPathFinder
 {
   /// Called once before the first frame.
-  #[allow(clippy::needless_return)]
   pub fn new(cc: &CreationContext<'_>) -> Self
   {
     // This is also where you can customize the look and feel of egui using
@@ -39,12 +40,12 @@ impl GridPathFinder
 
   fn calc_x_cell_count(&mut self)
   {
-    self.x_cell_count = ((self.screen_width - 2.*self.window_edge_offset - self.ui_width) / (2.*self.node_radius + self.gap_size)).floor() as i32 + 1;
+    self.grid_width = ((self.screen_width - 2.*self.window_edge_offset - self.ui_width) / (2.*self.node_radius + self.gap_size)).floor() as i32 + 1;
   }
 
   fn calc_y_cell_count(&mut self)
   {
-    self.y_cell_count = ((self.screen_height - 2.*self.window_edge_offset) / (2.*self.node_radius + self.gap_size)).floor() as i32 + 1;
+    self.grid_height = ((self.screen_height - 2.*self.window_edge_offset) / (2.*self.node_radius + self.gap_size)).floor() as i32 + 1;
   }
 
   fn update_cell_count(&mut self)
@@ -52,18 +53,37 @@ impl GridPathFinder
     self.calc_x_cell_count();
     self.calc_y_cell_count();
 
-    let new_cell_count = (self.x_cell_count * self.y_cell_count) as usize;
+    let new_cell_count = (self.grid_width * self.grid_height) as usize;
 
     if new_cell_count != self.grid.len()
     {
       self.grid = vec![Cell::Node; new_cell_count];
     }
   }
+
+  fn get_mut(&mut self, coords: (i32, i32)) -> &mut Cell
+  {
+    let x = coords.0;
+    let y = coords.1;
+    let index = x + (y * self.grid_width);
+    return self.grid.get_mut(index as usize).unwrap();
+  }
+
+  fn get(&mut self, coords: (i32, i32)) -> &Cell
+  {
+    let x = coords.0;
+    let y = coords.1;
+    let index = x + (y * self.grid_width);
+    // debug stuff
+    // println!("x: {x}    y: {y}");
+    // println!("grid_width: {}    grid_height: {}", self.grid_width, self.grid_height);
+    // println!("cell count: {}    get index: {}", (self.grid_width * self.grid_height), index as usize);
+    return self.grid.get(index as usize).unwrap();
+  }
 }
 
 impl Default for GridPathFinder
 {
-  #[allow(clippy::needless_return)]
   fn default() -> Self
   {
     let mut default = Self
@@ -74,15 +94,15 @@ impl Default for GridPathFinder
       gap_size: 10.,
       window_edge_offset: 20., // Actual offset from window edge is 15.
       ui_width: 170.,
-      x_cell_count: 0,
-      y_cell_count: 0,
+      grid_width: 0,
+      grid_height: 0,
       grid: vec![],
     };
 
     default.calc_x_cell_count();
     default.calc_y_cell_count();
 
-    default.grid = vec![Cell::Node; (default.x_cell_count * default.y_cell_count) as usize];
+    default.grid = vec![Cell::Node; (default.grid_width * default.grid_height) as usize];
 
     return default;
   }
@@ -97,6 +117,9 @@ impl App for GridPathFinder
     let screen_rect = ctx.input(|i: &egui::InputState| i.screen_rect());
     let (old_screen_width, old_screen_height) = (self.screen_width, self.screen_height);
     (self.screen_width, self.screen_height) = (screen_rect.width(), screen_rect.height());
+
+    // For later
+    let mouse = ctx.pointer_hover_pos().unwrap_or_default();
 
     // Screen size changed, update screen & recalculate grid size
     if old_screen_height != self.screen_height || old_screen_width != self.screen_width
@@ -122,7 +145,15 @@ impl App for GridPathFinder
       ui.heading("Debug stuff");
       ui.monospace(RichText::new(format!("width: {}", self.screen_width)));
       ui.monospace(RichText::new(format!("height: {}", self.screen_height)));
-      ui.monospace(RichText::new(format!("cell count: {}", self.grid.len())));
+      ui.monospace(RichText::new(format!("x_cell_count: {}", self.grid_width)));
+      ui.monospace(RichText::new(format!("y_cell_count: {}", self.grid_height)));
+      // debug
+      if ui.button("Toggle cell ig").clicked()
+      {
+        self.get_mut((0,0)).toggle();
+      }
+      let cell_type = if self.get((0, 0)).is_node() { "node" } else { "obstacle" };
+      ui.monospace(RichText::new(format!("cell type: {cell_type}")));
       ui.separator();
 
       ui.heading("Grid Path Finder");
@@ -134,6 +165,9 @@ impl App for GridPathFinder
 
       ui.heading("Stats");
       ui.monospace(RichText::new(format!("fps:{:>7.2}", 1./δ_time)));
+      ui.monospace(RichText::new(format!("# cells: {}", self.grid.len())));
+      ui.monospace(RichText::new(format!("# columns: {}", self.grid_width)));
+      ui.monospace(RichText::new(format!("# rows: {}", self.grid_height)));
       ui.add_space(20.);
 
       credits(ui);
@@ -155,21 +189,22 @@ impl App for GridPathFinder
 
         // Todo: calculate this and adjust gap for pleasant appearance
 
-        // Creating cartesian product for cell coordinates
-        let coords = (0..self.x_cell_count)
-          .flat_map(|x| (0..self.y_cell_count)
-            .map(|y| (x, y)).collect::<Vec<_>>()
-          ).collect::<Vec<_>>();
+        for x in 0..self.grid_width {
+        for y in 0..self.grid_height{
+          let is_node = self.get((x, y)).is_node();
 
-        // «Drawing» the cells
-        shapes.append(
-          &mut coords.iter()
-            .map(|(x, y)| (*x as f32, *y as f32))
-            .map(|(x, y)| (x * ((self.node_radius * 2.) + self.gap_size), y * ((self.node_radius * 2.) + self.gap_size)))
-            .map(|(x, y)| (x + self.window_edge_offset, y + self.window_edge_offset))
-            .map(|(x, y)| Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::WHITE)))
-            .collect()
-        );
+          let (mut x, mut y) = (x as f32, y as f32);
+          (x, y) = (x * ((self.node_radius * 2.) + self.gap_size), y * ((self.node_radius * 2.) + self.gap_size));
+          (x, y) = (x + self.window_edge_offset, y + self.window_edge_offset);
+
+          // Todo: Figure out mouse hover
+
+          if is_node { shapes.push(Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::WHITE))); }
+          else { shapes.push(Shape::circle_filled(pos2(x, y), self.node_radius, Color32::WHITE)); }
+
+          // shapes.push(Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::WHITE)));
+        }
+        }
 
         // Drawing everything
         ui.painter().extend(shapes);
@@ -192,7 +227,7 @@ fn credits(ui: &mut Ui)
     ui.separator();
     ui.spacing_mut().item_spacing.x = 0.0;
     ui.label("Made by ");
-    ui.hyperlink_to("Sandra", "https://github.com/an-Iceberg")
+    ui.hyperlink_to("Priscilla", "https://github.com/an-Iceberg")
       .on_hover_text(AUTHORS.unwrap());
   });
 
