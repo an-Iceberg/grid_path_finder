@@ -1,4 +1,5 @@
 use eframe::{App, CreationContext, Frame};
+use egui::Pos2;
 #[allow(unused_imports)] // TODO: remove when time comes
 use egui::{Margin, Rounding, Stroke};
 #[allow(unused_imports)] // TODO: remove when time comes
@@ -19,6 +20,8 @@ pub struct GridPathFinder
   grid_height: i32,
 
   grid: Vec<Cell>,
+
+  mouse: Pos2,
 }
 
 impl GridPathFinder
@@ -80,6 +83,20 @@ impl GridPathFinder
     // println!("cell count: {}    get index: {}", (self.grid_width * self.grid_height), index as usize);
     return self.grid.get(index as usize).unwrap();
   }
+
+  fn is_mouse_in_square(&self, x: f32, y: f32) -> bool
+  {
+    // `x` and `y` represent the centre of the square. `self.node_radius` represents the length of one side.
+    // Utilise self.mouse
+
+    if
+      self.mouse.x > x - (self.node_radius + (0.5*self.gap_size)) &&
+      self.mouse.y > y - (self.node_radius + (0.5*self.gap_size)) &&
+      self.mouse.x < x + (self.node_radius + (0.5*self.gap_size)) &&
+      self.mouse.y < y + (self.node_radius + (0.5*self.gap_size))
+    { return true; }
+    return false;
+  }
 }
 
 impl Default for GridPathFinder
@@ -97,6 +114,7 @@ impl Default for GridPathFinder
       grid_width: 0,
       grid_height: 0,
       grid: vec![],
+      mouse: Pos2::default(),
     };
 
     default.calc_x_cell_count();
@@ -119,7 +137,7 @@ impl App for GridPathFinder
     (self.screen_width, self.screen_height) = (screen_rect.width(), screen_rect.height());
 
     // For later
-    let mouse = ctx.pointer_hover_pos().unwrap_or_default();
+    self.mouse = ctx.pointer_hover_pos().unwrap_or_default();
 
     // Screen size changed, update screen & recalculate grid size
     if old_screen_height != self.screen_height || old_screen_width != self.screen_width
@@ -189,18 +207,29 @@ impl App for GridPathFinder
 
         // Todo: calculate this and adjust gap for pleasant appearance
 
+        // Todo: instead of doing all this create a custom widget TωT
+        // howto: https://github.com/emilk/egui/blob/master/crates/egui_demo_lib/src/demo/toggle_switch.rs
+        // helpful: https://github.com/emilk/egui/discussions/3696
         for x in 0..self.grid_width {
         for y in 0..self.grid_height{
           let is_node = self.get((x, y)).is_node();
 
           let (mut x, mut y) = (x as f32, y as f32);
+          // Calculating the center of the circle
           (x, y) = (x * ((self.node_radius * 2.) + self.gap_size), y * ((self.node_radius * 2.) + self.gap_size));
           (x, y) = (x + self.window_edge_offset, y + self.window_edge_offset);
 
           // Todo: Figure out mouse hover
 
-          if is_node { shapes.push(Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::WHITE))); }
+          // Drawing the circles
+          // If the mouse is hovering over the node
+          if self.is_mouse_in_square(x, y)
+          {
+            shapes.push(Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::from_rgb(255, 0, 255))));
+          }
+          else if is_node { shapes.push(Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::WHITE))); }
           else { shapes.push(Shape::circle_filled(pos2(x, y), self.node_radius, Color32::WHITE)); }
+
 
           // shapes.push(Shape::circle_stroke(pos2(x, y), self.node_radius, Stroke::new(1., Color32::WHITE)));
         }

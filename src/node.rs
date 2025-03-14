@@ -16,7 +16,6 @@ impl Cell
 
   pub(crate) fn is_node(&self) -> bool
   {
-    if *self == Cell::Obstacle { return false;}
-    else { return true; }
+    return *self == Cell::Node
   }
 }
