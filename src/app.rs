@@ -4,6 +4,7 @@ use egui::Pos2;
 use egui::{Margin, Rounding, Stroke};
 #[allow(unused_imports)] // TODO: remove when time comes
 use egui::{pos2, vec2, Align2, CentralPanel, Color32, Context, RichText, Shadow, Shape, SidePanel, Ui, Visuals, Window};
+use crate::components::toggle;
 use crate::{node::Cell, AUTHORS, REPOSITORY, VERSION};
 
 pub struct GridPathFinder
@@ -22,6 +23,8 @@ pub struct GridPathFinder
   grid: Vec<Cell>,
 
   mouse: Pos2,
+
+  toggle_value: bool,
 }
 
 impl GridPathFinder
@@ -115,6 +118,7 @@ impl Default for GridPathFinder
       grid_height: 0,
       grid: vec![],
       mouse: Pos2::default(),
+      toggle_value: false,
     };
 
     default.calc_x_cell_count();
@@ -161,6 +165,7 @@ impl App for GridPathFinder
     {
       ui.separator();
       ui.heading("Debug stuff");
+      ui.add(toggle(&mut self.toggle_value));
       ui.monospace(RichText::new(format!("width: {}", self.screen_width)));
       ui.monospace(RichText::new(format!("height: {}", self.screen_height)));
       ui.monospace(RichText::new(format!("x_cell_count: {}", self.grid_width)));
@@ -276,3 +281,4 @@ fn credits(ui: &mut Ui)
     ui.hyperlink_to("eframe", eframe_link,).on_hover_text(eframe_link);
   });
 }
+
