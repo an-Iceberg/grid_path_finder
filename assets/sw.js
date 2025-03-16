@@ -1,4 +1,4 @@
-var cacheName = 'egui-template-pwa';
+var cacheName = 'grid_path_finder_cache';
 var filesToCache = [
   './',
   './index.html',
