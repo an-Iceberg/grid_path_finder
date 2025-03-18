@@ -4,7 +4,7 @@ use egui::Pos2;
 use egui::{Margin, Rounding, Stroke};
 #[allow(unused_imports)] // TODO: remove when time comes
 use egui::{pos2, vec2, Align2, CentralPanel, Color32, Context, RichText, Shadow, Shape, SidePanel, Ui, Visuals, Window};
-use crate::components::toggle;
+use crate::components::{toggle::toggle, cell::cell};
 use crate::{node::Cell, AUTHORS, REPOSITORY, VERSION};
 
 pub struct GridPathFinder
@@ -166,6 +166,7 @@ impl App for GridPathFinder
       ui.separator();
       ui.heading("Debug stuff");
       ui.add(toggle(&mut self.toggle_value));
+      ui.add(cell(&mut self.toggle_value));
       ui.monospace(RichText::new(format!("width: {}", self.screen_width)));
       ui.monospace(RichText::new(format!("height: {}", self.screen_height)));
       ui.monospace(RichText::new(format!("x_cell_count: {}", self.grid_width)));
@@ -198,6 +199,7 @@ impl App for GridPathFinder
 
     CentralPanel::default().show(ctx, |ui|
     {
+      /*
       // Canvas to draw on
       egui::Frame::canvas(ui.style())
         .fill(Color32::from_rgb(110, 80, 30))
@@ -245,7 +247,7 @@ impl App for GridPathFinder
 
         // Todo: Make more efficient use of this
         ui.ctx().request_repaint();
-      });
+      }); */
     });
   }
 }
@@ -281,4 +283,3 @@ fn credits(ui: &mut Ui)
     ui.hyperlink_to("eframe", eframe_link,).on_hover_text(eframe_link);
   });
 }
-

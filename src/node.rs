@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate)  enum Cell
+pub(crate) enum Cell
 {
   Obstacle,
   Node,
