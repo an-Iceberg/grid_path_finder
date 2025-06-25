@@ -5,33 +5,33 @@ authors = ["Priscilla (Laila, Sandra)"]
 repository = "https://github.com/an-Iceberg/grid_path_finder"
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
-rust-version = "1.76"
+rust-version = "1.87"
 
 [package.metadata.docs.rs]
 all-features = true
 targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [dependencies]
-egui = "0.28"
-eframe = { version = "0.28", default-features = false, features = [
+egui = "0.31.0"
+eframe = { version = "0.31.0", default-features = false, features = [
   # "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
   "default_fonts", # Embed the default egui fonts.
   "glow",          # Use the glow rendering backend. Alternative: "wgpu".
+  "wayland",
+  "x11"
 ] }
-rand = "0.8.5"
-getrandom = { version = "0.2", features = ["js"] }
-log = "0.4"
-itertools = "0.13.0"
+# rand = "0.9.1"
+# getrandom = { version = "*", features = ["js"] }
+log = "0.4.27"
+
+# native:
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11.8"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4"
-
-# to access the DOM (to hide the loading text)
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-# HACK: pin web-sys to <0.3.70 until a new `eframe` is released containing
-# the following PR: https://github.com/emilk/egui/pull/4980
-version = ">= 0.3.4, < 0.3.70"
+wasm-bindgen-futures = "0.4.50"
+web-sys = "0.3.70"              # to access the DOM (to hide the loading text)
 
 [profile.release]
 opt-level = 3 # fast and small wasm

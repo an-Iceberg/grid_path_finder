@@ -1,4 +1,4 @@
-use egui::{lerp, pos2, vec2, Response, Sense, Ui, Widget};
+use egui::{lerp, pos2, vec2, Response, Sense, StrokeKind, Ui, Widget};
 
 pub fn toggle(on: &mut bool) -> impl Widget + '_
 {
@@ -25,7 +25,7 @@ fn toggle_button(ui: &mut Ui, on: &mut bool) -> Response
   let radius = 0.5 * rect.height();
 
   ui.painter()
-    .rect(rect, radius, visuals.bg_fill, visuals.bg_stroke);
+    .rect(rect, radius, visuals.bg_fill, visuals.bg_stroke, StrokeKind::Inside);
 
   let circle_x = lerp((rect.left() + radius)..=(rect.right() - radius), how_on);
   let center = pos2(circle_x, rect.center().y);
