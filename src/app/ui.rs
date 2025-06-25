@@ -1,10 +1,12 @@
 use eframe::{App, Frame};
+use egui::{Grid, Slider, Style};
 #[allow(unused_imports)] // TODO: remove when time comes
 use egui::{Margin, CornerRadius, Stroke};
 #[allow(unused_imports)] // TODO: remove when time comes
 use egui::{pos2, vec2, Align2, CentralPanel, Color32, Context, RichText, Shadow, Shape, SidePanel, Ui, Visuals, Window};
 use crate::components::{toggle::toggle, cell::cell};
-use crate::{AUTHORS, REPOSITORY, VERSION};
+use crate::node::Cell;
+use crate::{AUTHORS, GRID_OFFSET, REPOSITORY, UI_WIDTH, VERSION};
 use super::GridPathFinder;
 
 impl App for GridPathFinder
@@ -12,48 +14,57 @@ impl App for GridPathFinder
   /// Called each time the UI needs repainting, which may be many times per second.
   fn update(&mut self, ctx: &Context, frame: &mut Frame)
   {
-    let δ_time = frame.info().cpu_usage.unwrap_or(0.001);
-    let screen_rect = ctx.input(|i: &egui::InputState| i.screen_rect());
-    let (old_screen_width, old_screen_height) = (self.screen_width, self.screen_height);
-    (self.screen_width, self.screen_height) = (screen_rect.width(), screen_rect.height());
+    // let δ_time = frame.info().cpu_usage.unwrap_or(0.001);
+    // let screen_rect = ctx.input(|i: &egui::InputState| i.screen_rect());
+    // let (old_screen_width, old_screen_height) = (self.screen_width, self.screen_height);
+    // (self.screen_width, self.screen_height) = (screen_rect.width(), screen_rect.height());
 
-    // For later
-    self.mouse = ctx.pointer_hover_pos().unwrap_or_default();
+    // // For later
+    // // self.mouse = ctx.pointer_hover_pos().unwrap_or_default();
 
-    // Screen size changed, update screen & recalculate grid size
-    if old_screen_height != self.screen_height || old_screen_width != self.screen_width
-    {
-      // Recalculate grid size
-      // Todo: calculate amount of nodes in x and y direction
-      self.update_cell_count();
+    // // Screen size changed, update screen & recalculate grid size
+    // if old_screen_height != self.screen_height || old_screen_width != self.screen_width
+    // {
+    //   // Recalculate grid size
+    //   // Todo: calculate amount of nodes in x and y direction
+    //   self.update_cell_count();
 
-      // println!("{:?}", SystemTime::now());
+    //   // println!("{:?}", SystemTime::now());
 
-      // Reset graph
-    }
+    //   // Reset graph
+    // }
 
     // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
     // For inspiration and more examples, go to https://emilk.github.io/egui
 
     SidePanel::right("my_right_panel")
       .resizable(false)
-      .exact_width(self.ui_width)
+      .exact_width(UI_WIDTH)
     .show(ctx, |ui|
     {
       ui.separator();
       ui.heading("Debug stuff");
       ui.add(toggle(&mut self.toggle_value));
       ui.add(cell(&mut self.toggle_value));
-      ui.monospace(RichText::new(format!("width: {}", self.screen_width)));
-      ui.monospace(RichText::new(format!("height: {}", self.screen_height)));
+      ui.monospace(RichText::new(format!("width: {}", self.space_width)));
+      ui.monospace(RichText::new(format!("height: {}", self.space_height)));
       ui.monospace(RichText::new(format!("x_cell_count: {}", self.grid_width)));
       ui.monospace(RichText::new(format!("y_cell_count: {}", self.grid_height)));
-      // debug
       if ui.button("Toggle cell ig").clicked()
       {
         self.get_mut((0,0)).toggle();
       }
-      let cell_type = if self.get((0, 0)).is_node() { "node" } else { "obstacle" };
+      let cell_type = match self.get((0, 0))
+      {
+        None => "None",
+        Some(cell) => match *cell
+        {
+          Cell::Node => "node",
+          Cell::Obstacle => "obstacle",
+          Cell::Start => "start",
+          Cell::End => "end",
+        }
+      };
       ui.monospace(RichText::new(format!("cell type: {cell_type}")));
       ui.separator();
 
@@ -65,10 +76,10 @@ impl App for GridPathFinder
       ui.add_space(20.);
 
       ui.heading("Stats");
-      ui.monospace(RichText::new(format!("fps:{:>7.2}", 1./δ_time)));
-      ui.monospace(RichText::new(format!("# cells: {}", self.grid.len())));
-      ui.monospace(RichText::new(format!("# columns: {}", self.grid_width)));
-      ui.monospace(RichText::new(format!("# rows: {}", self.grid_height)));
+      // ui.monospace(RichText::new(format!("fps:{:>7.2}", 1./δ_time)));
+      ui.monospace(RichText::new(format!("# of cells: {}", self.grid.len())));
+      ui.monospace(RichText::new(format!("# of columns: {}", self.grid_width)));
+      ui.monospace(RichText::new(format!("# of rows: {}", self.grid_height)));
       ui.add_space(20.);
 
       credits(ui);
@@ -76,6 +87,28 @@ impl App for GridPathFinder
 
     CentralPanel::default().show(ctx, |ui|
     {
+      self.update_grid_height(ui.clip_rect().bottom());
+      self.update_grid_width(ui.clip_rect().right());
+
+      // ToDo: fill central panel with appropriate amount of cells
+
+      for _ in 0..self.grid_height
+      {
+        ui.horizontal(|ui|
+        {
+          for _ in 0..self.grid_width
+          {
+            ui.add(cell(&mut false));
+            ui.add_space(GRID_OFFSET);
+          }
+        });
+      }
+
+      // dbg!(ui.clip_rect());
+      // dbg!(ui.clip_rect().bottom());
+      // dbg!(ui.clip_rect().right());
+      // (self.screen_width, self.screen_height) = ui.clip_rect().
+
       /*
       // Canvas to draw on
       egui::Frame::canvas(ui.style())

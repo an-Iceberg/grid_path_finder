@@ -1,5 +1,12 @@
-use egui::{vec2, Color32, Response, Sense, Ui, Widget};
+use egui::{pos2, vec2, Color32, CornerRadius, Pos2, Rect, Response, Sense, Stroke, StrokeKind, Ui, Widget};
 
+// A wrapper that allows the more idiomatic usage pattern: `ui.add(toggle(&mut my_bool))`
+/// Grid cell
+///
+/// ## Example:
+/// ``` ignore
+/// ui.add(toggle(&mut my_bool));
+/// ```
 pub fn cell(on: &mut bool) -> impl Widget + '_
 {
   move |ui: &mut Ui| cell_button(ui, on)
@@ -17,6 +24,7 @@ fn cell_button(ui: &mut Ui, on: &mut bool) -> Response
   }
 
   if !ui.is_rect_visible(rect) { return response; }
+  if ui.is_enabled() {} // Todo: impl this
 
   // Visuals
   let visuals = ui.style().interact_selectable(&response, *on);
@@ -29,6 +37,14 @@ fn cell_button(ui: &mut Ui, on: &mut bool) -> Response
       if *on { Color32::WHITE } else { visuals.bg_fill },
       visuals.fg_stroke
     );
+  // debug
+  // ui.painter()
+  //   .rect_stroke(
+  //     rect,
+  //     CornerRadius::same(2),
+  //     Stroke::new(1.0, Color32::RED),
+  //     StrokeKind::Middle
+  //   );
 
   return response;
 }

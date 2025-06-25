@@ -10,7 +10,7 @@ fn main() -> eframe::Result
   {
     viewport: egui::ViewportBuilder::default()
       .with_inner_size([800.0, 600.0])
-      .with_min_inner_size([300.0, 220.0])
+      .with_min_inner_size([150.0, 150.0])
       .with_icon(
         // NOTE: Adding an icon is optional
         eframe::icon_data::from_png_bytes(&include_bytes!("../assets/icon-256.png")[..])
